@@ -1,0 +1,4 @@
+include_rules
+
+: foreach *.c |> !cc |>
+: foreach *.o |> !ld |> $(TOP)/teapots$(PROG_SUFFIX)

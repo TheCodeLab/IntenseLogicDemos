@@ -1,0 +1,52 @@
+.gitignore
+
+ifdef CXX
+CXX = @(CXX)
+else
+CXX = clang++
+endif
+
+ifdef CC
+CC = @(CC)
+else
+CC = clang
+endif
+
+ifdef LD
+LD = @(LD)
+else
+LD = $(CXX)
+endif
+
+ifdef AR
+AR = @(AR)
+else
+AR = ar rcs
+endif
+
+ifdef IL_SHADER_PATH
+IL_SHADER_PATH = @(IL_SHADER_PATH)
+else
+IL_SHADER_PATH = IntenseLogic/shaders
+endif
+
+ifdef LOADER
+LOADER = @(LOADER)
+else
+LOADER = EPOXY
+endif
+
+TOP = $(TUP_CWD)
+
+CFLAGS = -std=gnu99 @(CFLAGS)
+CXXFLAGS = -std=c++14 @(CXXFLAGS)
+CCFLAGS += -I$(TOP)/src -I$(TOP)/IntenseLogic/src -I$(TOP)/tiffgl/src -I. -DTGL_USE_EPOXY \
+           `pkg-config --cflags sdl2 bullet epoxy libpng libuv` @(DEMO_CCFLAGS)
+LDFLAGS += -pthread -ldemo -lilgraphics -ltgl -lilasset -lilmath -lilutil \
+           -L$(TOP) -L$(TOP)/IntenseLogic -L$(TOP)/tiffgl \
+           `pkg-config --libs sdl2 bullet epoxy libpng libuv` @(DEMO_LDFLAGS)
+
+!cxx = |> ^o C++ %f^ $(CXX) $(CCFLAGS) $(CXXFLAGS) -c %f -o %o |> %B.o | $(TOP)/<objs>
+!cc = |> ^o C %f^ $(CC) $(CCFLAGS) $(CFLAGS) -c %f -o %o |> %B.o | $(TOP)/<objs>
+!ar = |> ^o AR %o^ $(AR) %o %f |>
+!ld = | $(TOP)/<libs> $(TOP)/IntenseLogic/<libs> $(TOP)/tiffgl/libtgl.a $(TOP)/<objs> |> ^o LINK %o^ $(LD) %f $(LDFLAGS) $(LOCAL_LDFLAGS) -o %o |>
