@@ -2,6 +2,8 @@
 #include <SDL.h>
 #include <assert.h>
 
+#include "Demo.h"
+
 extern "C" {
 #include "tgl/tgl.h"
 #include "asset/node.h"
@@ -72,12 +74,10 @@ void event_cb(uv_fs_event_t *handle,
     }
 }
 
-extern const char *demo_shader;
-extern ilA_fs demo_fs;
-extern "C" void demo_start()
+int main(int argc, char **argv)
 {
-    SDL_Window *window;
-    SDL_GLContext context;
+    demoLoad(argc, argv);
+    Window window = createWindow("Shader Toy");
     ilA_file file;
     uv_loop_t loop;
     ilG_renderman rm[1];
@@ -87,7 +87,7 @@ extern "C" void demo_start()
     struct timeval start_real;
     int mouse[4];
     bool paused = false;
-    float mono_last, mono_start, speed = 1.0;
+    float mono_last = 0.0, mono_start = 0.0, speed = 1.0;
     uv_fs_event_t fsev;
 
     memset(rm, 0, sizeof(*rm));
@@ -96,7 +96,7 @@ extern "C" void demo_start()
     ilG_shaders_addPath("shadertoys");
     if (!ilA_fileopen(&ilG_shaders, &file, demo_shader, -1)) {
         ilA_printerror(&file.err);
-        return;
+        return 1;
     }
     il_log("Shader path: %s", file.name);
 
@@ -104,40 +104,6 @@ extern "C" void demo_start()
     uv_fs_event_init(&loop, &fsev);
     fsev.data = &shader;
     uv_fs_event_start(&fsev, event_cb, file.name, file.namelen);
-
-    unsigned msaa = 0;
-
-    SDL_GL_SetAttribute(SDL_GL_CONTEXT_MAJOR_VERSION, 3);
-    SDL_GL_SetAttribute(SDL_GL_CONTEXT_MINOR_VERSION, 2);
-    SDL_GL_SetAttribute(SDL_GL_RED_SIZE, 8);
-    SDL_GL_SetAttribute(SDL_GL_GREEN_SIZE, 8);
-    SDL_GL_SetAttribute(SDL_GL_BLUE_SIZE, 8);
-    SDL_GL_SetAttribute(SDL_GL_MULTISAMPLEBUFFERS, msaa != 0);
-    if (msaa) {
-        SDL_GL_SetAttribute(SDL_GL_MULTISAMPLESAMPLES, msaa);
-    }
-    SDL_GL_SetAttribute(SDL_GL_CONTEXT_PROFILE_MASK, SDL_GL_CONTEXT_PROFILE_CORE);
-    rm->width = 800;
-    rm->height = 800;
-    window = SDL_CreateWindow(
-        "Shader Toy",
-        SDL_WINDOWPOS_UNDEFINED,
-        SDL_WINDOWPOS_UNDEFINED,
-        rm->width, rm->height,
-        SDL_WINDOW_OPENGL | SDL_WINDOW_RESIZABLE);
-    if (!window) {
-        il_error("SDL_CreateWindow: %s", SDL_GetError());
-        return;
-    }
-    context = SDL_GL_CreateContext(window);
-    if (!context) {
-        il_error("SDL_GL_CreateContext: %s", SDL_GetError());
-        return;
-    }
-    if (epoxy_gl_version() < 32) {
-        il_error("Expected GL 3.2, got %u", epoxy_gl_version());
-        return;
-    }
 
     char *error;
     ilG_material m[1];
@@ -148,12 +114,12 @@ extern "C" void demo_start()
     if (!ilG_shader_file(&vert, "id2d.vert", GL_VERTEX_SHADER, &error)) {
         il_error("id2d.vert: %s", error);
         free(error);
-        return;
+        return 1;
     }
     if (!ilG_shader_compile(&vert, &error)) {
         il_error("id2d.vert: %s", error);
         free(error);
-        return;
+        return 1;
     }
     ilG_shader_load(&frag, file, GL_FRAGMENT_SHADER);
     m->vert = ilG_renderman_addShader(rm, vert);
@@ -162,7 +128,7 @@ extern "C" void demo_start()
     if (!shader.compile(&error)) {
         il_error("%s", error);
         free(error);
-        return;
+        return 1;
     }
     tgl_vao_init(&vao);
     tgl_vao_bind(&vao);
@@ -184,7 +150,8 @@ extern "C" void demo_start()
                 ilG_renderman_delMaterial(rm, shader.mat);
                 tgl_vao_free(&vao);
                 tgl_quad_free(&quad);
-                return;
+                window.close();
+                return 0;
             case SDL_MOUSEMOTION:
                 mouse[0] = ev.motion.x;
                 mouse[1] = ev.motion.y;
@@ -222,9 +189,7 @@ extern "C" void demo_start()
             }
         }
 
-        int width, height;
-        SDL_GetWindowSize(window, &width, &height);
-        glViewport(0, 0, width, height);
+        auto s = window.resize();
 
         struct timeval now, tv;
         float tf;
@@ -237,11 +202,11 @@ extern "C" void demo_start()
             mono_start += ((float)tv.tv_sec + (float)tv.tv_usec/1000000.0) * speed;
             tf = mono_last = mono_start;
         }
-        shader.bind(width, height, tf, mouse);
+        shader.bind(s.first, s.second, tf, mouse);
 
         tgl_vao_bind(&vao);
         tgl_quad_draw_once(&quad);
 
-        SDL_GL_SwapWindow(window);
+        window.swap();
     }
 }

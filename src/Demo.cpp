@@ -1,20 +1,28 @@
-#include <string.h>
-#include <stdlib.h>
-#include <stdio.h>
-#include <string.h>
+#include "Demo.h"
 
+#include <cstring>
+#include <cstdlib>
+#include <cstdio>
+#include <cstring>
+#include <fenv.h>
+
+#include "tgl/tgl.h"
+
+extern "C" {
 #include "util/log.h"
 #include "util/version.h"
 #include "util/opt.h"
-#include "asset/node.h"
 #include "graphics/graphics.h"
+}
+
+enum ArgType {
+    NO_ARG,
+    REQUIRED,
+    OPTIONAL
+};
 
 const struct {
-    enum {
-        NO_ARG,
-        REQUIRED,
-        OPTIONAL
-    } arg;
+    ArgType arg;
     char s;
     const char *l, *h;
 } help[] = {
@@ -23,30 +31,26 @@ const struct {
     {REQUIRED,  'd', "data",    "Adds a directory to look for data files"},
     {REQUIRED,  's', "shaders", "Adds a directory to look for GLSL shaders"},
     {REQUIRED,  'f', "shader",  "ShaderToy demo: Select shader to load"},
+    {NO_ARG,      0, "fpe",     "Enable trapping on floating point exceptions"},
     {NO_ARG,      0, NULL,      NULL}
 };
 
-ilA_fs demo_fs;
-const char *demo_shader;
-
-void demo_start();
-
-int main(int argc, char **argv)
+void demoLoad(int argc, char **argv)
 {
     size_t i;
     il_opts opts = il_opt_parse(argc, argv);
-    il_modopts *main_opts = il_opts_lookup(&opts, "");
+    il_modopts *main_opts = il_opts_lookup(&opts, const_cast<char*>(""));
 
     ilA_adddir(&demo_fs, "assets", -1);
 
     for (i = 0; main_opts && i < main_opts->args.length; i++) {
         il_opt *opt = &main_opts->args.data[i];
         char *arg = strndup(opt->arg.str, opt->arg.len);
-#define option(s, l) if (il_string_cmp(opt->name, il_string_new(s)) || il_string_cmp(opt->name, il_string_new(l)))
+#define option(s, l) if (il_string_cmp(opt->name, il_string_new(const_cast<char*>(s))) || \
+                         il_string_cmp(opt->name, il_string_new(const_cast<char*>(l))))
         option("h", "help") {
             printf("IntenseLogic %s\n", il_version);
             printf("Usage: %s [OPTIONS]\n\n", argv[0]);
-            printf("Each module may have its own options, see relavent documentation for those.\n\n");
             printf("Options:\n");
             for (i = 0; help[i].l; i++) {
                 static const char *const arg_strs[] = {
@@ -67,13 +71,13 @@ int main(int argc, char **argv)
                        help[i].h
                 );
             }
-            return 0;
+            exit(0);
         }
         option("v", "version") {
             printf("IntenseLogic %s\n", il_version);
             printf("Commit: %s\n", il_commit);
             printf("Built: %s\n", il_build_date);
-            return 0;
+            exit(0);
         }
         option("d", "data") {
             ilA_adddir(&demo_fs, arg, -1);
@@ -84,6 +88,10 @@ int main(int argc, char **argv)
         option("f", "shader") {
             demo_shader = arg;
             continue; // don't free arg
+        }
+        option("", "fpe") {
+            feenableexcept(FE_DIVBYZERO | FE_INVALID | FE_OVERFLOW);
+            il_log("Floating point exceptions enabled");
         }
         free(arg);
     }
@@ -97,8 +105,43 @@ int main(int argc, char **argv)
     il_log("Built %s", il_build_date);
 
     il_load_ilgraphics();
-    demo_start();
-    ilG_quit();
-
-    return 0;
 }
+
+Window createWindow(const char *title, unsigned msaa)
+{
+    Window window;
+    SDL_GL_SetAttribute(SDL_GL_CONTEXT_MAJOR_VERSION, 3);
+    SDL_GL_SetAttribute(SDL_GL_CONTEXT_MINOR_VERSION, 2);
+    SDL_GL_SetAttribute(SDL_GL_RED_SIZE, 8);
+    SDL_GL_SetAttribute(SDL_GL_GREEN_SIZE, 8);
+    SDL_GL_SetAttribute(SDL_GL_BLUE_SIZE, 8);
+    SDL_GL_SetAttribute(SDL_GL_MULTISAMPLEBUFFERS, msaa != 0);
+    if (msaa) {
+        SDL_GL_SetAttribute(SDL_GL_MULTISAMPLESAMPLES, msaa);
+    }
+    SDL_GL_SetAttribute(SDL_GL_CONTEXT_PROFILE_MASK, SDL_GL_CONTEXT_PROFILE_CORE);
+    window.window = SDL_CreateWindow(
+        title,
+        SDL_WINDOWPOS_UNDEFINED,
+        SDL_WINDOWPOS_UNDEFINED,
+        800, 600,
+        SDL_WINDOW_OPENGL | SDL_WINDOW_RESIZABLE);
+    if (!window.window) {
+        il_error("SDL_CreateWindow: %s", SDL_GetError());
+        exit(1);
+    }
+    window.context = SDL_GL_CreateContext(window.window);
+    if (!window.context) {
+        il_error("SDL_GL_CreateContext: %s", SDL_GetError());
+        exit(1);
+    }
+    if (epoxy_gl_version() < 32) {
+        il_error("Expected GL 3.2, got %u", epoxy_gl_version());
+        exit(1);
+    }
+
+    return window;
+}
+
+ilA_fs demo_fs;
+const char *demo_shader;
