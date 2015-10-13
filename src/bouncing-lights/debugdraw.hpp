@@ -25,28 +25,28 @@ class DebugDraw : public btIDebugDraw {
     std::vector<Vertex> lines;
     GLuint vbo, vao;
     GLuint vp_loc;
-    int debugMode;
-    unsigned count;
+    int debugMode = DBG_DrawAabb;
     ilG_renderman *rm = nullptr;
 
-    static void upload_cb(void*);
-    static void view(void *ptr, ilG_rendid id, il_mat *mats);
-    static void free(void *ptr);
-    static bool build(void *ptr, ilG_rendid id, ilG_renderman *rm, ilG_buildresult *out);
 public:
-    DebugDraw();
+    void free();
+    bool build(ilG_renderman *rm, char **error);
+    void draw(il_mat vp);
+    // call before running bullet
+    void begin() {
+        lines.clear();
+    }
 
-    ilG_builder builder();
-
-    void render();
-    void upload();
-    void drawLine(const btVector3 &from, const btVector3 &to, const btVector3 &color);
-    void drawLine(const btVector3 &from, const btVector3 &to, const btVector3 &fromColor, const btVector3 &toColor);
-    void reportErrorWarning(const char *str);
-    void draw3dText(const btVector3 &location, const char *textString);
-    void setDebugMode(int debugMode);
-    int getDebugMode() const;
-    void drawContactPoint(const btVector3 &PointOnB, const btVector3 &normalOnB, btScalar distance, int lifeTime, const btVector3 &color);
+    // btIDebugDraw
+    void drawLine(const btVector3 &from, const btVector3 &to, const btVector3 &color) override;
+    void drawLine(const btVector3 &from, const btVector3 &to,
+                  const btVector3 &fromColor, const btVector3 &toColor) override;
+    void reportErrorWarning(const char *str) override;
+    void draw3dText(const btVector3 &location, const char *textString) override;
+    void setDebugMode(int debugMode) override;
+    int getDebugMode() const override;
+    void drawContactPoint(const btVector3 &PointOnB, const btVector3 &normalOnB, btScalar distance,
+                          int lifeTime, const btVector3 &color) override;
 };
 
 }

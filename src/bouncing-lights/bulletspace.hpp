@@ -11,7 +11,6 @@
 
 extern "C" {
 #include "math/matrix.h"
-#include "graphics/context.h"
 }
 
 namespace BouncingLights {
@@ -22,46 +21,40 @@ struct BulletSpace {
     std::vector<il_vec3> scale;
     std::vector<unsigned> freelist;
 
-    static void free(void *ptr);
-    static void viewmats(void *ptr, il_mat *out, int *types, unsigned num_objects);
-    static void objmats(void *ptr, const unsigned *objects, unsigned num_objects, il_mat *out, int type);
-    static bool build(void *ptr, unsigned id, ilG_context *context, ilG_coordsys *out);
-
     il_vec3 pos(unsigned id);
     il_quat rot(unsigned id);
 
 public:
-    class BodyId {
-        BodyId(unsigned id) : id(id) {}
+    class BodyID {
+        BodyID(unsigned id) : id(id) {}
         unsigned id;
         friend BulletSpace;
     public:
-        unsigned getId()
+        unsigned value() const
         {
             return id;
         }
     };
-    BulletSpace(btPairCachingGhostObject &ghost, btDispatcher *dispatcher, btBroadphaseInterface *cache, btConstraintSolver *solver, btCollisionConfiguration *config);
-    void build(ilG_context *context);
-    BodyId addBody(const btRigidBody::btRigidBodyConstructionInfo &info);
-    void delBody(BodyId id);
-    void add(ilG_handle r, BodyId id);
-    void del(ilG_handle r, BodyId id);
+
+    BulletSpace(btPairCachingGhostObject &ghost, btDispatcher *dispatcher,
+                btBroadphaseInterface *cache, btConstraintSolver *solver,
+                btCollisionConfiguration *config);
+
+    BodyID add(const btRigidBody::btRigidBodyConstructionInfo &info);
+    void del(BodyID id);
     int step(float by, int maxsubs = 1, float fixed = 1/60.f);
-    btRigidBody &getBody(BodyId id)
-    {
-        return bodies[id.id];
+    il_mat viewmat(int type);
+    void objmats(il_mat *out, BodyID *in, int type, size_t count);
+    btRigidBody &getBody(BodyID id) {
+        return bodies[id.value()];
     }
-    void setBodyScale(BodyId id, il_vec3 v)
-    {
-        scale[id.id] = v;
+    void setBodyScale(BodyID id, il_vec3 v) {
+        scale[id.value()] = v;
     }
 
     btDiscreteDynamicsWorld world;
     btPairCachingGhostObject &ghost;
     il_mat projection;
-    unsigned id;
-    std::mutex mutex;
 };
 
 }

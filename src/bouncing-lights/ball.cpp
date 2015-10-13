@@ -1,5 +1,7 @@
 #include "ball.hpp"
 
+#include "Demo.h"
+
 extern "C" {
 #include "graphics/context.h"
 #include "graphics/material.h"
@@ -16,37 +18,29 @@ enum {
 
 using namespace BouncingLights;
 
-extern ilA_fs demo_fs;
-
-void BallRenderer::free(void *ptr)
+void BallRenderer::free()
 {
-    BallRenderer &self = *reinterpret_cast<BallRenderer*>(ptr);
-    ilG_mesh_free(&self.mesh);
-    ilG_renderman_delMaterial(self.rm, self.mat);
+    ilG_mesh_free(&mesh);
+    ilG_renderman_delMaterial(rm, mat);
 }
 
-void BallRenderer::draw(void *obj, ilG_rendid id, il_mat **mats, const unsigned *objects, unsigned num_mats)
+void BallRenderer::draw(il_mat *mvp, il_mat *imt, il_vec3 *col, size_t count)
 {
-    (void)id, (void)objects;
-    BallRenderer &self = *reinterpret_cast<BallRenderer*>(obj);
-    ilG_material *mat = ilG_renderman_findMaterial(self.rm, self.mat);
-    ilG_mesh_bind(&self.mesh);
+    ilG_material *mat = ilG_renderman_findMaterial(rm, this->mat);
+    ilG_mesh_bind(&mesh);
     ilG_material_bind(mat);
-    for (unsigned i = 0; i < num_mats; i++) {
-        ilG_material_bindMatrix(mat, self.mvp_loc, mats[MVP][i]);
-        ilG_material_bindMatrix(mat, self.imt_loc, mats[IMT][i]);
-        il_vec3 c = self.cols[objects[i]];
-        glUniform3f(self.col_loc, c.x, c.y, c.z);
-        ilG_mesh_draw(&self.mesh);
+    for (unsigned i = 0; i < count; i++) {
+        ilG_material_bindMatrix(mat, mvp_loc, mvp[i]);
+        ilG_material_bindMatrix(mat, imt_loc, imt[i]);
+        il_vec3 c = col[i];
+        glUniform3f(col_loc, c.x, c.y, c.z);
+        ilG_mesh_draw(&mesh);
     }
 }
 
-bool BallRenderer::build(void *obj, ilG_rendid id, ilG_renderman *rm, ilG_buildresult *out)
+bool BallRenderer::build(ilG_renderman *rm, char **error)
 {
-    (void)id;
-    BallRenderer &b = *reinterpret_cast<BallRenderer*>(obj);
-
-    b.rm = rm;
+    this->rm = rm;
 
     ilG_material m;
     ilG_material_init(&m);
@@ -54,38 +48,20 @@ bool BallRenderer::build(void *obj, ilG_rendid id, ilG_renderman *rm, ilG_buildr
     ilG_material_fragData(&m, ILG_CONTEXT_NORMAL, "out_Normal");
     ilG_material_fragData(&m, ILG_CONTEXT_ALBEDO, "out_Albedo");
     ilG_material_arrayAttrib(&m, ILG_MESH_POS, "in_Position");
-    if (!ilG_renderman_addMaterialFromFile(rm, m, "glow.vert", "glow.frag", &b.mat, &out->error)) {
+    if (!ilG_renderman_addMaterialFromFile(rm, m, "glow.vert", "glow.frag", &mat, error)) {
         return false;
     }
-    ilG_material *mat = ilG_renderman_findMaterial(rm, b.mat);
-    b.mvp_loc = ilG_material_getLoc(mat, "mvp");
-    b.imt_loc = ilG_material_getLoc(mat, "imt");
-    b.col_loc = ilG_material_getLoc(mat, "col");
+    ilG_material *mat = ilG_renderman_findMaterial(rm, this->mat);
+    mvp_loc = ilG_material_getLoc(mat, "mvp");
+    imt_loc = ilG_material_getLoc(mat, "imt");
+    col_loc = ilG_material_getLoc(mat, "col");
 
-    if (!ilG_mesh_fromfile(&b.mesh, &demo_fs, "sphere.obj")) {
+    if (!ilG_mesh_fromfile(&mesh, &demo_fs, "sphere.obj")) {
         return false;
     }
-    if (!ilG_mesh_build(&b.mesh)) {
+    if (!ilG_mesh_build(&mesh)) {
         return false;
     }
 
-    int *types = (int*)calloc(2, sizeof(int));
-    types[MVP] = ILG_MVP;
-    types[IMT] = ILG_IMT;
-    out->free = &BallRenderer::free;
-    out->draw = &BallRenderer::draw;
-    out->types = types;
-    out->num_types = 2;
-    out->obj = obj;
-    out->name = strdup("Ball");
     return true;
-}
-
-namespace BouncingLights {
-
-ilG_builder BallRenderer::builder()
-{
-    return ilG_builder_wrap(this, &BallRenderer::build);
-}
-
 }
