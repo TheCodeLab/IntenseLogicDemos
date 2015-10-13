@@ -1,4 +1,5 @@
 include_rules
 
 : foreach *.c |> !cc |>
+: foreach *.cpp |> !cxx |>
 : *.o |> !ar |> $(TOP)/libdemo.a $(TOP)/<libs>
