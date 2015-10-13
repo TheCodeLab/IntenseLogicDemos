@@ -5,15 +5,20 @@
 #include <cstdio>
 #include <cstring>
 #include <fenv.h>
+#include <vector>
+#include <string>
 
 #include "tgl/tgl.h"
 
 extern "C" {
+#include "util/logger.h"
 #include "util/log.h"
 #include "util/version.h"
 #include "util/opt.h"
 #include "graphics/graphics.h"
 }
+
+using namespace std;
 
 enum ArgType {
     NO_ARG,
@@ -107,6 +112,75 @@ void demoLoad(int argc, char **argv)
     il_load_ilgraphics();
 }
 
+struct DebugGroupStack {
+    vector<string> entries;
+};
+
+static GLvoid error_cb(GLenum esource, GLenum etype, GLuint id, GLenum eseverity,
+                       GLsizei length, const GLchar* message, const GLvoid* user)
+{
+    auto &stack = *reinterpret_cast<DebugGroupStack*>(const_cast<void*>(user));
+    const char *ssource;
+    switch(esource) {
+        case GL_DEBUG_SOURCE_API_ARB:               ssource=" API";              break;
+        case GL_DEBUG_SOURCE_WINDOW_SYSTEM_ARB:     ssource=" Window System";    break;
+        case GL_DEBUG_SOURCE_SHADER_COMPILER_ARB:   ssource=" Shader Compiler";  break;
+        case GL_DEBUG_SOURCE_THIRD_PARTY_ARB:       ssource=" Third Party";      break;
+        case GL_DEBUG_SOURCE_APPLICATION_ARB:       ssource=" Application";      break;
+        case GL_DEBUG_SOURCE_OTHER_ARB:             ssource="";            break;
+        default: ssource="???";
+    }
+    const char *stype;
+    switch(etype) {
+        case GL_DEBUG_TYPE_ERROR_ARB:               stype=" error";                 break;
+        case GL_DEBUG_TYPE_DEPRECATED_BEHAVIOR_ARB: stype=" deprecated behaviour";  break;
+        case GL_DEBUG_TYPE_UNDEFINED_BEHAVIOR_ARB:  stype=" undefined behaviour";   break;
+        case GL_DEBUG_TYPE_PORTABILITY_ARB:         stype=" portability issue";     break;
+        case GL_DEBUG_TYPE_PERFORMANCE_ARB:         stype=" performance issue";     break;
+        case GL_DEBUG_TYPE_OTHER_ARB:               stype="";                       break;
+        case GL_DEBUG_TYPE_PUSH_GROUP: {
+            stack.entries.push_back(message);
+            return;
+        }
+        case GL_DEBUG_TYPE_POP_GROUP: {
+            stack.entries.pop_back();
+            return;
+        }
+        default: stype="???";
+    }
+    const char *sseverity;
+    switch(eseverity) {
+        case GL_DEBUG_SEVERITY_HIGH_ARB:    sseverity="high";   break;
+        case GL_DEBUG_SEVERITY_MEDIUM_ARB:  sseverity="medium"; break;
+        case GL_DEBUG_SEVERITY_LOW_ARB:     sseverity="low";    break;
+        default: sseverity="???";
+    }
+    string msg(message, length);
+    if (msg.back() == '\n') {
+        msg.pop_back();
+    }
+
+    string groups;
+    if (!stack.entries.empty()) {
+        groups += " in " + stack.entries.front();
+        for (auto it = stack.entries.begin()+1; it != stack.entries.end(); it++) {
+            groups += ".";
+            groups += *it;
+        }
+    }
+
+    string buf = string(sseverity) + stype + " #" + to_string(id) + groups + ": " + msg;
+    string source = string("OpenGL") + ssource;
+
+    il_logmsg lmsg;
+    memset(&lmsg, 0, sizeof(il_logmsg));
+    lmsg.level = IL_NOTIFY;
+    lmsg.msg = il_string_bin(const_cast<char*>(buf.data()), buf.size());
+    lmsg.func = il_string_bin(const_cast<char*>(source.data()), source.size());
+
+    il_logger_log(il_logger_cur(), lmsg);
+}
+
 Window createWindow(const char *title, unsigned msaa)
 {
     Window window;
@@ -138,6 +212,17 @@ Window createWindow(const char *title, unsigned msaa)
     if (epoxy_gl_version() < 32) {
         il_error("Expected GL 3.2, got %u", epoxy_gl_version());
         exit(1);
+    }
+
+    if (TGL_EXTENSION(KHR_debug)) {
+        glDebugMessageControl(GL_DONT_CARE, GL_DEBUG_TYPE_PUSH_GROUP, GL_DONT_CARE, 0, NULL, true);
+        glDebugMessageControl(GL_DONT_CARE, GL_DEBUG_TYPE_POP_GROUP, GL_DONT_CARE, 0, NULL, true);
+        glDebugMessageCallback(&error_cb, new DebugGroupStack);
+        glEnable(GL_DEBUG_OUTPUT);
+        il_log("KHR_debug present, enabling advanced errors");
+        tgl_check("glDebugMessageCallback()");
+    } else {
+        il_log("KHR_debug missing");
     }
 
     return window;
