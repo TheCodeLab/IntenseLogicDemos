@@ -33,7 +33,6 @@ bool Graphics::init(const Flags &flags)
 
     ilG_renderman_setup(rm, flags.msaa, flags.hdr);
     ilG_renderman_resize(rm, 800, 600);
-    ilG_floatspace_build(&space, rm);
     glClampColor(GL_CLAMP_READ_COLOR, GL_FALSE);
 
     ilG_box(&box);

@@ -100,7 +100,6 @@ int main(int argc, char **argv)
 
     ilG_floatspace fs;
     ilG_floatspace_init(&fs, 1);
-    ilG_floatspace_build(&fs, rm);
     fs.projection = il_mat_perspective(M_PI / 4.0, 4.0/3, .5, 200);
 
     il_pos_setPosition(&fs.camera, il_vec3_new(0, 0, 5));
