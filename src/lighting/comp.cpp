@@ -1,7 +1,6 @@
 #include "comp.h"
 
 extern "C" {
-#include "graphics/context.h"
 #include "graphics/floatspace.h"
 #include "graphics/material.h"
 #include "graphics/renderer.h"
@@ -197,11 +196,11 @@ bool Computer::build(ilG_renderman *rm, char **error)
     ilG_material_arrayAttrib(&m, ATTRIB_POSITION,     "in_Position");
     ilG_material_arrayAttrib(&m, ATTRIB_NORMAL,       "in_Normal");
     ilG_material_arrayAttrib(&m, ATTRIB_TEXCOORD,     "in_Texcoord");
-    ilG_material_fragData(&m, ILG_CONTEXT_ALBEDO,     "out_Albedo");
-    ilG_material_fragData(&m, ILG_CONTEXT_NORMAL,     "out_Normal");
-    ilG_material_fragData(&m, ILG_CONTEXT_REFRACTION, "out_Refraction");
-    ilG_material_fragData(&m, ILG_CONTEXT_GLOSS,      "out_Gloss");
-    ilG_material_fragData(&m, ILG_CONTEXT_EMISSION,   "out_Emission");
+    ilG_material_fragData(&m, ILG_GBUFFER_ALBEDO,     "out_Albedo");
+    ilG_material_fragData(&m, ILG_GBUFFER_NORMAL,     "out_Normal");
+    ilG_material_fragData(&m, ILG_GBUFFER_REFRACTION, "out_Refraction");
+    ilG_material_fragData(&m, ILG_GBUFFER_GLOSS,      "out_Gloss");
+    ilG_material_fragData(&m, ILG_GBUFFER_EMISSION,   "out_Emission");
     ilG_material_textureUnit(&m, TEX_ALBEDO,          "tex_Albedo");
     ilG_material_textureUnit(&m, TEX_NORMAL,          "tex_Normal");
     ilG_material_textureUnit(&m, TEX_REFRACTION,      "tex_Reflect");

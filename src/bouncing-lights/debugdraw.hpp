@@ -5,7 +5,7 @@
 #include "tgl/tgl.h"
 
 extern "C" {
-#include "graphics/context.h"
+#include "graphics/renderer.h"
 #include "graphics/material.h"
 }
 

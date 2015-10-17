@@ -7,7 +7,6 @@
 
 extern "C" {
 #include "graphics/arrayattrib.h"
-#include "graphics/context.h"
 #include "graphics/floatspace.h"
 #include "graphics/material.h"
 #include "tgl/tgl.h"

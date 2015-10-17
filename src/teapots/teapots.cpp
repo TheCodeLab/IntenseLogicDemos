@@ -9,7 +9,6 @@
 extern "C" {
 #include "asset/node.h"
 #include "graphics/graphics.h"
-#include "graphics/context.h"
 #include "graphics/floatspace.h"
 #include "graphics/material.h"
 #include "graphics/mesh.h"
@@ -55,10 +54,10 @@ struct Teapot {
         ilG_material_arrayAttrib(&m, ILG_MESH_DIFFUSE, "in_Diffuse");
         ilG_material_arrayAttrib(&m, ILG_MESH_SPECULAR, "in_Specular");
         ilG_material_textureUnit(&m, 0, "tex");
-        ilG_material_fragData(&m, ILG_CONTEXT_ALBEDO, "out_Albedo");
-        ilG_material_fragData(&m, ILG_CONTEXT_NORMAL, "out_Normal");
-        ilG_material_fragData(&m, ILG_CONTEXT_REFRACTION, "out_Refraction");
-        ilG_material_fragData(&m, ILG_CONTEXT_GLOSS, "out_Gloss");
+        ilG_material_fragData(&m, ILG_GBUFFER_ALBEDO, "out_Albedo");
+        ilG_material_fragData(&m, ILG_GBUFFER_NORMAL, "out_Normal");
+        ilG_material_fragData(&m, ILG_GBUFFER_REFRACTION, "out_Refraction");
+        ilG_material_fragData(&m, ILG_GBUFFER_GLOSS, "out_Gloss");
         if (!ilG_renderman_addMaterialFromFile(rm, m, "teapot.vert", "teapot.frag", &mat, error)) {
             return false;
         }

@@ -6,7 +6,6 @@
 #include "Demo.h"
 
 extern "C" {
-#include "graphics/context.h"
 #include "graphics/floatspace.h"
 #include "graphics/material.h"
 #include "graphics/renderer.h"
@@ -81,7 +80,7 @@ int main(int argc, char **argv)
     ilG_material_init(&m);
     ilG_material_name(&m, "Box Shader");
     ilG_material_arrayAttrib(&m, 0, "in_Position");
-    ilG_material_fragData(&m, ILG_CONTEXT_ALBEDO, "out_Color");
+    ilG_material_fragData(&m, ILG_GBUFFER_ALBEDO, "out_Color");
     if (!ilG_renderman_addMaterialFromFile(rm, m, "box.vert", "box.frag", &mat, &error)) {
         il_error("Box Shader: %s", error);
         free(error);

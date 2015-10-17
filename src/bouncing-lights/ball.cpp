@@ -3,7 +3,6 @@
 #include "Demo.h"
 
 extern "C" {
-#include "graphics/context.h"
 #include "graphics/material.h"
 #include "graphics/mesh.h"
 #include "graphics/renderer.h"
@@ -45,8 +44,8 @@ bool BallRenderer::build(ilG_renderman *rm, char **error)
     ilG_material m;
     ilG_material_init(&m);
     ilG_material_name(&m, "Ball Material");
-    ilG_material_fragData(&m, ILG_CONTEXT_NORMAL, "out_Normal");
-    ilG_material_fragData(&m, ILG_CONTEXT_ALBEDO, "out_Albedo");
+    ilG_material_fragData(&m, ILG_GBUFFER_NORMAL, "out_Normal");
+    ilG_material_fragData(&m, ILG_GBUFFER_ALBEDO, "out_Albedo");
     ilG_material_arrayAttrib(&m, ILG_MESH_POS, "in_Position");
     if (!ilG_renderman_addMaterialFromFile(rm, m, "glow.vert", "glow.frag", &mat, error)) {
         return false;
