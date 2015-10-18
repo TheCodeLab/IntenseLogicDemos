@@ -165,10 +165,10 @@ void Computer::draw(il_mat mvp, il_mat imt)
 {
     ilG_material *mat = ilG_renderman_findMaterial(rm, this->mat);
 
-    ilG_tex_bind(&tex_albedo);
-    ilG_tex_bind(&tex_normal);
-    ilG_tex_bind(&tex_refraction);
-    ilG_tex_bind(&tex_emission);
+    ilG_tex_bind(&tex_albedo, TEX_ALBEDO);
+    ilG_tex_bind(&tex_normal, TEX_NORMAL);
+    ilG_tex_bind(&tex_refraction, TEX_REFRACTION);
+    ilG_tex_bind(&tex_emission, TEX_EMISSION);
 
     ilG_material_bind(mat);
     tgl_vao_bind(&vao);
@@ -184,6 +184,10 @@ void Computer::free()
     glDeleteBuffers(1, &v_vbo);
     glDeleteBuffers(1, &n_vbo);
     glDeleteBuffers(1, &t_vbo);
+    ilG_tex_free(&tex_albedo);
+    ilG_tex_free(&tex_normal);
+    ilG_tex_free(&tex_refraction);
+    ilG_tex_free(&tex_emission);
 }
 
 bool Computer::build(ilG_renderman *rm, char **error)
@@ -249,8 +253,6 @@ bool Computer::build(ilG_renderman *rm, char **error)
             il_error("%s", ilA_img_strerror(err));
             return false;
         }
-        ilG_tex_build(texes[i]);
-        texes[i]->unit = i;
     }
 
     return true;

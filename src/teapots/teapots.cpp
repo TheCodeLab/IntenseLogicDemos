@@ -33,12 +33,13 @@ struct Teapot {
     void free() {
         ilG_renderman_delMaterial(rm, mat);
         ilG_mesh_free(&mesh);
+        ilG_tex_free(&tex);
     }
     void draw(il_mat mvp, il_mat imt) {
         ilG_material *mat = ilG_renderman_findMaterial(rm, this->mat);
         ilG_material_bind(mat);
         ilG_mesh_bind(&mesh);
-        ilG_tex_bind(&tex);
+        ilG_tex_bind(&tex, 0);
         ilG_material_bindMatrix(mat, mvp_loc, mvp);
         ilG_material_bindMatrix(mat, imt_loc, imt);
         ilG_mesh_draw(&mesh);
@@ -73,8 +74,6 @@ struct Teapot {
         }
 
         ilG_tex_loadfile(&tex, &demo_fs, "white-marble-texture.png");
-        tex.unit = 0;
-        ilG_tex_build(&tex);
         return true;
     }
 };
