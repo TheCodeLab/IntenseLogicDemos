@@ -9,8 +9,7 @@
 #include <utility>
 #include <ctime>
 #include <math.h>
-
-#include <experimental/optional>
+#include <random>
 
 #include "tgl/tgl.h"
 #include "debugdraw.hpp"
@@ -38,11 +37,6 @@ extern "C" {
 
 const btScalar arenaWidth = 128;
 
-float rand_float(unsigned *seedp)
-{
-    return (float)rand_r(seedp) / RAND_MAX;
-}
-
 struct Scene : public Drawable {
     Scene(BulletSpace &space)
         : space(space) {}
@@ -51,7 +45,7 @@ struct Scene : public Drawable {
     vector<BulletSpace::BodyID> bodies;
     vector<il_vec3> colors;
     vector<ilG_light> lights;
-    experimental::optional<BulletSpace::BodyID> heightmap_body;
+    BulletSpace::BodyID heightmap_body = BulletSpace::BodyID(0);
     ilG_heightmap heightmap;
     BallRenderer ball;
     btSphereShape sphere_shape = btSphereShape(1);
@@ -62,13 +56,13 @@ struct Scene : public Drawable {
         btStaticPlaneShape(btVector3( 0, 0, -1), 1)
     };
     btDefaultMotionState ground_motion_state[4], heightmap_motion_state;
-    experimental::optional<btHeightfieldTerrainShape> heightmap_shape;
+    btHeightfieldTerrainShape *heightmap_shape;
 
     void draw(Graphics &graphics) override {
         (void)graphics;
         il_mat hmvp, himt;
-        space.objmats(&hmvp, &*heightmap_body, ILG_MVP, 1);
-        space.objmats(&himt, &*heightmap_body, ILG_IMT, 1);
+        space.objmats(&hmvp, &heightmap_body, ILG_MVP, 1);
+        space.objmats(&himt, &heightmap_body, ILG_IMT, 1);
         ilG_heightmap_draw(&heightmap, hmvp, himt);
 
         vector<il_mat> mvp, imt;
@@ -112,8 +106,8 @@ struct Scene : public Drawable {
         // Physics
         /////////////////////
         const unsigned height = 50;
-        heightmap_shape = btHeightfieldTerrainShape(hm.width, hm.height, hm.data, height/255.f, 0,
-                                                    height, 1, PHY_UCHAR, false);
+        heightmap_shape = new btHeightfieldTerrainShape(hm.width, hm.height, hm.data, height/255.f, 0,
+                                                        height, 1, PHY_UCHAR, false);
         heightmap_shape->setLocalScaling(btVector3(arenaWidth/hm.width, 1, arenaWidth/hm.height));
         btTransform trans = btTransform(btQuaternion(0,0,0,1),
                                         btVector3(arenaWidth/2, height/2, arenaWidth/2));
@@ -121,8 +115,8 @@ struct Scene : public Drawable {
         btRigidBody::btRigidBodyConstructionInfo groundRigidBodyCI
             (0, &heightmap_motion_state, &*heightmap_shape, btVector3(0,0,0));
         heightmap_body = space.add(groundRigidBodyCI);
-        space.getBody(*heightmap_body).setRestitution(1.0);
-        space.setBodyScale(*heightmap_body, il_vec3_new(128, 50, 128));
+        space.getBody(heightmap_body).setRestitution(1.0);
+        space.setBodyScale(heightmap_body, il_vec3_new(128, 50, 128));
         // Rendering
         ///////////////////////
         ilA_img norm;
@@ -164,12 +158,16 @@ struct Scene : public Drawable {
 
     void populate(size_t count) {
         unsigned seed;
+        std::default_random_engine gen;
+        std::uniform_int_distribution<> mod128(0, 127);
+        std::uniform_int_distribution<> from50to75(50, 75);
+        std::uniform_real_distribution<> unit(0.f, 1.f);
         for (size_t i = 0; i < count; i++) {
             // Physics body
-            btVector3 position
-                (rand_r(&seed) % 128,
-                 rand_r(&seed) % 32 + 50,
-                 rand_r(&seed) % 128);
+            btVector3 position(
+                mod128(gen),
+                from50to75(gen),
+                mod128(gen));
             auto state = new btDefaultMotionState(btTransform(btQuaternion(0,0,0,1), position));
             float mass = 1.f;
             btVector3 inertia(0,0,0);
@@ -179,11 +177,11 @@ struct Scene : public Drawable {
             space.getBody(id).setRestitution(1.0);
 
             // Color
-            float brightness = rand_float(&seed) + 1;
+            float brightness = unit(gen) + 1;
             auto col = il_vec3_new(
-                rand_float(&seed) * brightness,
-                rand_float(&seed) * brightness,
-                rand_float(&seed) * brightness);
+                unit(gen) * brightness,
+                unit(gen) * brightness,
+                unit(gen) * brightness);
 
             // Light
             ilG_light light;

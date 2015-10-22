@@ -26,12 +26,13 @@ struct BulletSpace {
 
 public:
     class BodyID {
-        BodyID(unsigned id) : id(id) {}
         unsigned id;
         friend BulletSpace;
+
     public:
-        unsigned value() const
-        {
+        BodyID(unsigned id) : id(id) {}
+
+        unsigned value() const {
             return id;
         }
     };

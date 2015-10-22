@@ -7,13 +7,13 @@
 #include <fenv.h>
 #include <vector>
 #include <string>
+#include <memory>
 
 #include "tgl/tgl.h"
 
 extern "C" {
 #include "util/logger.h"
 #include "util/log.h"
-#include "util/version.h"
 #include "util/opt.h"
 #include "graphics/graphics.h"
 }
@@ -32,7 +32,6 @@ const struct {
     const char *l, *h;
 } help[] = {
     {NO_ARG,    'h', "help",    "Prints this message and exits"},
-    {NO_ARG,    'v', "version", "Prints the version and exits"},
     {REQUIRED,  'd', "data",    "Adds a directory to look for data files"},
     {REQUIRED,  's', "shaders", "Adds a directory to look for GLSL shaders"},
     {REQUIRED,  'f', "shader",  "ShaderToy demo: Select shader to load"},
@@ -50,11 +49,10 @@ void demoLoad(int argc, char **argv)
 
     for (i = 0; main_opts && i < main_opts->args.length; i++) {
         il_opt *opt = &main_opts->args.data[i];
-        char *arg = strndup(opt->arg.str, opt->arg.len);
+        std::string arg(opt->arg.str, opt->arg.len);
 #define option(s, l) if (il_string_cmp(opt->name, il_string_new(const_cast<char*>(s))) || \
                          il_string_cmp(opt->name, il_string_new(const_cast<char*>(l))))
         option("h", "help") {
-            printf("IntenseLogic %s\n", il_version);
             printf("Usage: %s [OPTIONS]\n\n", argv[0]);
             printf("Options:\n");
             for (i = 0; help[i].l; i++) {
@@ -78,37 +76,29 @@ void demoLoad(int argc, char **argv)
             }
             exit(0);
         }
-        option("v", "version") {
-            printf("IntenseLogic %s\n", il_version);
-            printf("Commit: %s\n", il_commit);
-            printf("Built: %s\n", il_build_date);
-            exit(0);
-        }
         option("d", "data") {
-            ilA_adddir(&demo_fs, arg, -1);
+            ilA_adddir(&demo_fs, arg.c_str(), -1);
         }
         option("s", "shaders") {
-            ilG_shaders_addPath(arg);
+            ilG_shaders_addPath(arg.c_str());
         }
         option("f", "shader") {
-            demo_shader = arg;
-            continue; // don't free arg
+            demo_shader = std::move(arg);
         }
         option("", "fpe") {
+#ifdef _WIN32
+            _controlfp(_EM_INVALID | _EM_ZERODIVIDE | _EM_OVERFLOW, _MCW_EM);
+#else
             feenableexcept(FE_DIVBYZERO | FE_INVALID | FE_OVERFLOW);
+#endif
             il_log("Floating point exceptions enabled");
         }
-        free(arg);
     }
 
     ilG_shaders_addPath("shaders");
     ilG_shaders_addPath("IntenseLogic/shaders");
 
     il_log("Initializing engine.");
-    il_log("IntenseLogic %s", il_version);
-    il_log("IL Commit: %s", il_commit);
-    il_log("Built %s", il_build_date);
-
     il_load_ilgraphics();
 }
 
@@ -116,8 +106,8 @@ struct DebugGroupStack {
     vector<string> entries;
 };
 
-static GLvoid error_cb(GLenum esource, GLenum etype, GLuint id, GLenum eseverity,
-                       GLsizei length, const GLchar* message, const GLvoid* user)
+static GLvoid APIENTRY error_cb(GLenum esource, GLenum etype, GLuint id, GLenum eseverity,
+                                GLsizei length, const GLchar* message, const GLvoid* user)
 {
     auto &stack = *reinterpret_cast<DebugGroupStack*>(const_cast<void*>(user));
     const char *ssource;
@@ -228,5 +218,38 @@ Window createWindow(const char *title, unsigned msaa)
     return window;
 }
 
+#ifdef _WIN32
+
+int main(int argc, char **argv);
+
+int CALLBACK WinMain(
+    _In_ HINSTANCE hInstance,
+    _In_ HINSTANCE hPrevInstance,
+    _In_ LPSTR     lpCmdLine,
+    _In_ int       nCmdShow)
+{
+    LPWSTR lpwCmdLine = NULL;
+    int len = MultiByteToWideChar(CP_UTF8, MB_PRECOMPOSED, lpCmdLine, -1, lpwCmdLine, 0);
+    lpwCmdLine = new WCHAR[len];
+    MultiByteToWideChar(CP_UTF8, MB_PRECOMPOSED, lpCmdLine, -1, lpwCmdLine, len);
+    int argc;
+    LPWSTR *argvw = CommandLineToArgvW(lpwCmdLine, &argc);
+    delete[] lpwCmdLine;
+    LPSTR *argv = new LPSTR[argc];
+    for (int i = 0; i < argc; i++) {
+        int len = WideCharToMultiByte(CP_UTF8, WC_NO_BEST_FIT_CHARS | WC_COMPOSITECHECK | WC_DEFAULTCHAR, argvw[i], -1, argv[i], 0, NULL, NULL);
+        argv[i] = new CHAR[len + 1];
+        argv[i][len] = 0;
+        WideCharToMultiByte(CP_UTF8, WC_NO_BEST_FIT_CHARS | WC_COMPOSITECHECK | WC_DEFAULTCHAR, argvw[i], -1, argv[i], len, NULL, NULL);
+    }
+    LocalFree(argvw);
+    main(argc, argv);
+    for (int i = 0; i < argc; i++) {
+        delete[] argv[i];
+    }
+}
+
+#endif
+
 ilA_fs demo_fs;
-const char *demo_shader;
+std::string demo_shader;

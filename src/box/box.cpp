@@ -1,7 +1,7 @@
 #include <SDL.h>
 #include <time.h>
-#include <sys/time.h>
 #include <math.h>
+#include <chrono>
 
 #include "Demo.h"
 
@@ -63,6 +63,8 @@ static const float cube[] = {
     1.0, -1.0,  1.0,
 };
 
+using namespace std;
+
 int main(int argc, char **argv)
 {
     demoLoad(argc, argv);
@@ -100,7 +102,7 @@ int main(int argc, char **argv)
 
     ilG_floatspace fs;
     ilG_floatspace_init(&fs, 1);
-    fs.projection = il_mat_perspective(M_PI / 4.0, 4.0/3, .5, 200);
+    fs.projection = il_mat_perspective(float(M_PI / 4.f), 4.f/3, .5f, 200.f);
 
     il_pos_setPosition(&fs.camera, il_vec3_new(0, 0, 5));
 
@@ -111,6 +113,10 @@ int main(int argc, char **argv)
     glBindBuffer(GL_ARRAY_BUFFER, vbo);
     glEnable(GL_DEPTH_TEST);
 
+    typedef chrono::steady_clock clock;
+    typedef chrono::duration<double> duration;
+
+    clock::time_point start = clock::now();
     while (1) {
         SDL_Event ev;
         while (SDL_PollEvent(&ev)) {
@@ -124,15 +130,14 @@ int main(int argc, char **argv)
             }
         }
 
-        struct timeval ts;
-        gettimeofday(&ts, NULL);
-        int secs = 5;
-        float delta = ((float)(ts.tv_sec%secs) + ts.tv_usec / 1000000.0) / secs;
+        duration delta = clock::now() - start;
         il_vec3 v;
-        v.x = sinf(delta * M_PI * 2) * 5;
-        v.y = 0;
-        v.z = cosf(delta * M_PI * 2) * 5;
-        il_quat q = il_quat_fromAxisAngle(0, 1, 0, delta * M_PI * 2);
+        const float secs = 5.f;
+        const float dist = 5.f;
+        v.x = float(sin(delta.count() * M_PI * 2.0 / secs) * dist);
+        v.y = 0.f;
+        v.z = float(cos(delta.count() * M_PI * 2.0 / secs) * dist);
+        il_quat q = il_quat_fromAxisAngle(0, 1, 0, float(delta.count() * M_PI * 2 / secs));
         il_pos_setPosition(&fs.camera, v);
         il_pos_setRotation(&fs.camera, q);
 

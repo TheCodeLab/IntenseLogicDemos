@@ -1,7 +1,7 @@
 #include <uv.h>
 #include <SDL.h>
 #include <assert.h>
-#include <sys/time.h>
+#include <chrono>
 
 #include "Demo.h"
 
@@ -52,7 +52,7 @@ struct Shader {
     void bind(unsigned width, unsigned height, float time, int mouse[4]) {
         ilG_material *mat = ilG_renderman_findMaterial(rm, this->mat);
         ilG_material_bind(mat);
-        glUniform2f(iResolution, width, height);
+        glUniform2f(iResolution, GLfloat(width), GLfloat(height));
         glUniform1f(iGlobalTime, time);
         glUniform4iv(iMouse, 1, mouse);
     }
@@ -84,17 +84,15 @@ int main(int argc, char **argv)
     Shader shader(rm);
     tgl_quad quad;
     tgl_vao vao;
-    struct timeval start_real;
     int mouse[4];
     bool paused = false;
-    float mono_last = 0.0, mono_start = 0.0, speed = 1.0;
     uv_fs_event_t fsev;
 
     memset(rm, 0, sizeof(*rm));
 
     ilA_adddir(&demo_fs, "shadertoys", -1);
     ilG_shaders_addPath("shadertoys");
-    if (!ilA_fileopen(&ilG_shaders, &file, demo_shader, -1)) {
+    if (!ilA_fileopen(&ilG_shaders, &file, demo_shader.c_str(), -1)) {
         ilA_printerror(&file.err);
         return 1;
     }
@@ -103,7 +101,7 @@ int main(int argc, char **argv)
     uv_loop_init(&loop);
     uv_fs_event_init(&loop, &fsev);
     fsev.data = &shader;
-    uv_fs_event_start(&fsev, event_cb, file.name, file.namelen);
+    uv_fs_event_start(&fsev, event_cb, file.name, 0);
 
     char *error;
     ilG_material m[1];
@@ -133,8 +131,11 @@ int main(int argc, char **argv)
     tgl_vao_init(&vao);
     tgl_vao_bind(&vao);
     tgl_quad_init(&quad, ILG_ARRATTR_POSITION);
-    gettimeofday(&start_real, NULL);
 
+    typedef std::chrono::steady_clock clock;
+    typedef std::chrono::duration<double> duration;
+    clock::time_point start_real = clock::now();
+    float mono_last = 0.0, mono_start = 0.0, speed = 1.0;
     while (1) {
         uv_run(&loop, UV_RUN_NOWAIT);
 
@@ -167,14 +168,14 @@ int main(int argc, char **argv)
                 switch (ev.key.keysym.sym) {
                 case SDLK_r:
                     il_log("Replay");
-                    gettimeofday(&start_real, NULL);
+                    start_real = clock::now();
                     mono_start = 0.0;
                     mono_last = 0.0;
                     break;
                 case SDLK_p:
                     paused = !paused;
                     il_log("%s", paused? "Paused" : "Unpaused");
-                    gettimeofday(&start_real, NULL);
+                    start_real = clock::now();
                     break;
                 case SDLK_LEFT:
                     speed /= 2;
@@ -191,16 +192,16 @@ int main(int argc, char **argv)
 
         auto s = window.resize();
 
-        struct timeval now, tv;
         float tf;
         if (paused) {
             tf = mono_last;
         } else {
-            gettimeofday(&now, NULL);
-            timersub(&now, &start_real, &tv);
+            auto now = clock::now();
+            duration delta = now - start_real;
             start_real = now;
-            mono_start += ((float)tv.tv_sec + (float)tv.tv_usec/1000000.0) * speed;
+            mono_start += float(delta.count() * speed);
             tf = mono_last = mono_start;
+            printf("%f\n", tf);
         }
         shader.bind(s.first, s.second, tf, mouse);
 

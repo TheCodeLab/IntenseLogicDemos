@@ -3,6 +3,7 @@
 
 #include <SDL.h>
 #include <utility>
+#include <string>
 
 #include "tgl/tgl.h"
 
@@ -32,6 +33,6 @@ struct Window {
 Window createWindow(const char *title, unsigned msaa = 0);
 
 extern ilA_fs demo_fs;
-extern const char *demo_shader;
+extern std::string demo_shader;
 
 #endif

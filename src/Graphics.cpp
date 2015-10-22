@@ -31,7 +31,7 @@ bool Graphics::init(const Flags &flags)
     }
     initialized = true;
 
-    ilG_renderman_setup(rm, flags.msaa, flags.hdr);
+    ilG_renderman_setup(rm, flags.msaa != 0, flags.hdr);
     ilG_renderman_resize(rm, 800, 600);
     glClampColor(GL_CLAMP_READ_COLOR, GL_FALSE);
 
@@ -76,17 +76,17 @@ bool Graphics::init(const Flags &flags)
         ::free(error);
         return false;
     }
-    if (!ilG_lighting_build(&sun, rm, &ico, ILG_SUN, flags.msaa, &error)) {
+    if (!ilG_lighting_build(&sun, rm, &ico, ILG_SUN, flags.msaa != 0, &error)) {
         il_error("sunlighting: %s", error);
         ::free(error);
         return false;
     }
-    if (!ilG_lighting_build(&point, rm, &ico, ILG_POINT, flags.msaa, &error)) {
+    if (!ilG_lighting_build(&point, rm, &ico, ILG_POINT, flags.msaa != 0, &error)) {
         il_error("lighting: %s", error);
         ::free(error);
         return false;
     }
-    if (!ilG_tonemapper_build(&tonemapper, rm, flags.msaa, &error)) {
+    if (!ilG_tonemapper_build(&tonemapper, rm, flags.msaa != 0, &error)) {
         il_error("tonemapper: %s", error);
         ::free(error);
         return false;

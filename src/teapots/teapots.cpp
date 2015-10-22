@@ -1,7 +1,7 @@
 #include <SDL.h>
 #include <time.h>
-#include <sys/time.h>
 #include <math.h>
+#include <chrono>
 
 #include "Demo.h"
 #include "Graphics.h"
@@ -123,7 +123,7 @@ int main(int argc, char **argv)
     il_pos_setPosition(&lightp, il_vec3_new(20, 3, 20));
 
     ilG_light lightl;
-    lightl.color = il_vec3_new(.8*2, .7*2, .2*2);
+    lightl.color = il_vec3_new(.8f*2, .7f*2, .2f*2);
     lightl.radius = 50;
 
     State state;
@@ -133,6 +133,10 @@ int main(int argc, char **argv)
     state.sunlight_lights = &lightl;
     state.sunlight_count = 1;
 
+    typedef std::chrono::steady_clock clock;
+    typedef std::chrono::duration<double> duration;
+
+    clock::time_point start = clock::now();
     while (1) {
         SDL_Event ev;
         while (SDL_PollEvent(&ev)) {
@@ -144,16 +148,14 @@ int main(int argc, char **argv)
             }
         }
 
-        struct timeval ts;
-        gettimeofday(&ts, NULL);
-        int secs = 5;
-        float delta = ((float)(ts.tv_sec%secs) + ts.tv_usec / 1000000.0) / secs;
+        duration delta = clock::now() - start;
+        const double secs = 5.0;
+        const int scale = 20;
         il_vec3 v;
-        int scale = 20;
-        v.x = sinf(delta * M_PI * 2) * scale;
-        v.y = 0;
-        v.z = cosf(delta * M_PI * 2) * scale;
-        il_quat q = il_quat_fromAxisAngle(0, 1, 0, delta * M_PI * 2);
+        v.x = float(sin(delta.count() * M_PI * 2.0 / secs) * scale);
+        v.y = 0.f;
+        v.z = float(cos(delta.count() * M_PI * 2.0 / secs) * scale);
+        il_quat q = il_quat_fromAxisAngle(0, 1, 0, float(delta.count() * M_PI * 2.0 / secs));
         il_pos_setPosition(&graphics.space.camera, v);
         il_pos_setRotation(&graphics.space.camera, q);
 

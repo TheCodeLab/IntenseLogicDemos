@@ -16,10 +16,10 @@ struct State {
     bool mouse_grab = false;
     bool vsync = true;
     il_mat projection;
-    float fov = M_PI / 4;
-    float zmin = 0.5, zfar = 1024.0;
-    il_vec3 ambient_col = il_vec3_new(.2,.2,.2);
-    float exposure = 1.0, gamma = 1.0;
+    float fov = float(M_PI) / 4.f;
+    float zmin = 0.5f, zfar = 1024.f;
+    il_vec3 ambient_col = il_vec3_new(.2f,.2f,.2f);
+    float exposure = 1.f, gamma = 1.f;
 
     unsigned *sunlight_locs = nullptr;
     ilG_light *sunlight_lights = nullptr;
