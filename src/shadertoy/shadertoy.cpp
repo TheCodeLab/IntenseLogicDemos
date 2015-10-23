@@ -11,7 +11,6 @@ extern "C" {
 #include "graphics/graphics.h"
 #include "graphics/material.h"
 #include "graphics/renderer.h"
-#include "util/timer.h"
 #include "util/log.h"
 }
 
