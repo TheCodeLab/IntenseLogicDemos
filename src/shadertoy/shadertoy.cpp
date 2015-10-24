@@ -110,7 +110,7 @@ int main(int argc, char **argv)
     ilG_material m[1];
     ilG_material_init(m);
     ilG_material_name(m, "Shader Toy");
-    ilG_material_arrayAttrib(m, ILG_ARRATTR_POSITION, "in_Position");
+    ilG_material_arrayAttrib(m, 0, "in_Position");
     ilG_shader vert, frag;
     if (!ilG_shader_file(&vert, "id2d.vert", GL_VERTEX_SHADER, &error)) {
         il_error("id2d.vert: %s", error);
@@ -133,7 +133,7 @@ int main(int argc, char **argv)
     }
     tgl_vao_init(&vao);
     tgl_vao_bind(&vao);
-    tgl_quad_init(&quad, ILG_ARRATTR_POSITION);
+    tgl_quad_init(&quad, 0);
 
     typedef std::chrono::steady_clock clock;
     typedef std::chrono::duration<double> duration;

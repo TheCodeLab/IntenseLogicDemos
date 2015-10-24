@@ -58,9 +58,6 @@ bool BallRenderer::build(ilG_renderman *rm, char **error)
     if (!ilG_mesh_fromfile(&mesh, &demo_fs, "sphere.obj")) {
         return false;
     }
-    if (!ilG_mesh_build(&mesh)) {
-        return false;
-    }
 
     return true;
 }

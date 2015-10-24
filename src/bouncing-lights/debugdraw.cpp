@@ -10,9 +10,13 @@ extern "C" {
 #include "graphics/transform.h"
 #include "math/matrix.h"
 #include "graphics/renderer.h"
-#include "graphics/arrayattrib.h"
 #include "util/log.h"
 }
+
+enum {
+    ATTR_POSITION,
+    ATTR_AMBIENT
+};
 
 void DebugDraw::draw(il_mat vp)
 {
@@ -40,8 +44,8 @@ bool DebugDraw::build(ilG_renderman *rm, char **error)
     ilG_material m;
     ilG_material_init(&m);
     ilG_material_name(&m, "Bullet Line Renderer");
-    ilG_material_arrayAttrib(&m, ILG_ARRATTR_POSITION, "in_Position");
-    ilG_material_arrayAttrib(&m, ILG_ARRATTR_AMBIENT, "in_Ambient");
+    ilG_material_arrayAttrib(&m, ATTR_POSITION, "in_Position");
+    ilG_material_arrayAttrib(&m, ATTR_AMBIENT, "in_Ambient");
     if (!ilG_renderman_addMaterialFromFile(rm, m, "bullet-debug.vert", "bullet-debug.frag", &mat, error)) {
         return false;
     }
@@ -51,10 +55,10 @@ bool DebugDraw::build(ilG_renderman *rm, char **error)
     glGenVertexArrays(1, &vao);
     glBindBuffer(GL_ARRAY_BUFFER, vbo);
     glBindVertexArray(vao);
-    glVertexAttribPointer(ILG_ARRATTR_POSITION, 3, GL_FLOAT, GL_FALSE, sizeof(Vertex), (GLvoid*)offsetof(Vertex, pos));
-    glVertexAttribPointer(ILG_ARRATTR_AMBIENT, 3, GL_FLOAT, GL_FALSE, sizeof(Vertex), (GLvoid*)offsetof(Vertex, col));
-    glEnableVertexAttribArray(ILG_ARRATTR_POSITION);
-    glEnableVertexAttribArray(ILG_ARRATTR_AMBIENT);
+    glVertexAttribPointer(ATTR_POSITION, 3, GL_FLOAT, GL_FALSE, sizeof(Vertex), (GLvoid*)offsetof(Vertex, pos));
+    glVertexAttribPointer(ATTR_AMBIENT, 3, GL_FLOAT, GL_FALSE, sizeof(Vertex), (GLvoid*)offsetof(Vertex, col));
+    glEnableVertexAttribArray(ATTR_POSITION);
+    glEnableVertexAttribArray(ATTR_AMBIENT);
     glBufferData(GL_ARRAY_BUFFER, 0, NULL, GL_DYNAMIC_DRAW);
 
     return true;

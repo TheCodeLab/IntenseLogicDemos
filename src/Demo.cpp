@@ -8,6 +8,9 @@
 #include <vector>
 #include <string>
 #include <memory>
+#ifndef _WIN32
+#include <signal.h>
+#endif
 
 #include "tgl/tgl.h"
 
@@ -38,6 +41,47 @@ const struct {
     {NO_ARG,      0, "fpe",     "Enable trapping on floating point exceptions"},
     {NO_ARG,      0, NULL,      NULL}
 };
+
+static void sdl_error(void *ptr, int cat, SDL_LogPriority pri, const char *reason)
+{
+    (void)ptr;
+    const char *scat;
+    unsigned level;
+    switch (cat) {
+#define C(n, s) case n: scat = s; break;
+        C(SDL_LOG_CATEGORY_APPLICATION, "application"   )
+        C(SDL_LOG_CATEGORY_ERROR,       "error"         )
+        C(SDL_LOG_CATEGORY_SYSTEM,      "system"        )
+        C(SDL_LOG_CATEGORY_AUDIO,       "audio"         )
+        C(SDL_LOG_CATEGORY_VIDEO,       "video"         )
+        C(SDL_LOG_CATEGORY_RENDER,      "render"        )
+        C(SDL_LOG_CATEGORY_INPUT,       "input"         )
+        C(SDL_LOG_CATEGORY_CUSTOM,      "custom"        )
+        default:
+        scat = "unknown";
+#undef C
+    }
+    switch (pri) {
+#define C(n, l) case n: level = l; break;
+        C(SDL_LOG_PRIORITY_VERBOSE,  5)
+        C(SDL_LOG_PRIORITY_DEBUG,    4)
+        C(SDL_LOG_PRIORITY_INFO,     3)
+        C(SDL_LOG_PRIORITY_WARN,     2)
+        C(SDL_LOG_PRIORITY_ERROR,    1)
+        C(SDL_LOG_PRIORITY_CRITICAL, 0)
+        default:
+        level = 3;
+#undef C
+    }
+    il_logmsg log;
+    memset(&log, 0, sizeof(il_logmsg));
+    char msg_str[64];
+    sprintf(msg_str, "SDL %s error", scat);
+    log.level = il_loglevel(level);
+    log.msg = il_string_new(msg_str);
+    log.reason = il_string_new((char*)reason);
+    il_logger_log(il_logger_cur(), log);
+}
 
 void demoLoad(int argc, char **argv)
 {
@@ -98,8 +142,18 @@ void demoLoad(int argc, char **argv)
     ilG_shaders_addPath("shaders");
     ilG_shaders_addPath("IntenseLogic/shaders");
 
-    il_log("Initializing engine.");
-    il_load_ilgraphics();
+    if (SDL_Init(SDL_INIT_NOPARACHUTE) != 0) {
+        il_error("SDL_Init: %s", SDL_GetError());
+    }
+    if (SDL_VideoInit(NULL) != 0) {
+        il_error("SDL_VideoInit: %s", SDL_GetError());
+    }
+#ifndef _WIN32
+    signal(SIGINT, SIG_DFL);
+    signal(SIGTERM, SIG_DFL);
+#endif
+    SDL_LogSetOutputFunction(sdl_error, NULL);
+    il_log("Using SDL %s", SDL_GetRevision());
 }
 
 struct DebugGroupStack {

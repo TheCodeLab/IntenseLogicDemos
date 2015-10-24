@@ -69,9 +69,6 @@ struct Teapot {
         if (!ilG_mesh_fromfile(&mesh, &demo_fs, "teapot.obj")) {
             return false;
         }
-        if (!ilG_mesh_build(&mesh)) {
-            return false;
-        }
 
         ilG_tex_loadfile(&tex, &demo_fs, "white-marble-texture.png");
         return true;
