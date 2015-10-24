@@ -91,6 +91,10 @@ int main(int argc, char **argv)
 
     ilA_adddir(&demo_fs, "shadertoys", -1);
     ilG_shaders_addPath("shadertoys");
+    if (demo_shader.empty()) {
+        fprintf(stderr, "Pass a shader with -f\n");
+        return 1;
+    }
     if (!ilA_fileopen(&ilG_shaders, &file, demo_shader.c_str(), -1)) {
         ilA_printerror(&file.err);
         return 1;
@@ -200,7 +204,6 @@ int main(int argc, char **argv)
             start_real = now;
             mono_start += float(delta.count() * speed);
             tf = mono_last = mono_start;
-            printf("%f\n", tf);
         }
         shader.bind(s.first, s.second, tf, mouse);
 

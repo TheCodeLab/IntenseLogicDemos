@@ -219,36 +219,13 @@ Window createWindow(const char *title, unsigned msaa)
 }
 
 #ifdef _WIN32
+// hack to fix SDL
+FILE _iob[] = { *stdin, *stdout, *stderr };
 
-int main(int argc, char **argv);
-
-int CALLBACK WinMain(
-    _In_ HINSTANCE hInstance,
-    _In_ HINSTANCE hPrevInstance,
-    _In_ LPSTR     lpCmdLine,
-    _In_ int       nCmdShow)
+extern "C" FILE * __cdecl __iob_func(void)
 {
-    LPWSTR lpwCmdLine = NULL;
-    int len = MultiByteToWideChar(CP_UTF8, MB_PRECOMPOSED, lpCmdLine, -1, lpwCmdLine, 0);
-    lpwCmdLine = new WCHAR[len];
-    MultiByteToWideChar(CP_UTF8, MB_PRECOMPOSED, lpCmdLine, -1, lpwCmdLine, len);
-    int argc;
-    LPWSTR *argvw = CommandLineToArgvW(lpwCmdLine, &argc);
-    delete[] lpwCmdLine;
-    LPSTR *argv = new LPSTR[argc];
-    for (int i = 0; i < argc; i++) {
-        int len = WideCharToMultiByte(CP_UTF8, WC_NO_BEST_FIT_CHARS | WC_COMPOSITECHECK | WC_DEFAULTCHAR, argvw[i], -1, argv[i], 0, NULL, NULL);
-        argv[i] = new CHAR[len + 1];
-        argv[i][len] = 0;
-        WideCharToMultiByte(CP_UTF8, WC_NO_BEST_FIT_CHARS | WC_COMPOSITECHECK | WC_DEFAULTCHAR, argvw[i], -1, argv[i], len, NULL, NULL);
-    }
-    LocalFree(argvw);
-    main(argc, argv);
-    for (int i = 0; i < argc; i++) {
-        delete[] argv[i];
-    }
+    return _iob;
 }
-
 #endif
 
 ilA_fs demo_fs;
