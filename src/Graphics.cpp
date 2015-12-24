@@ -138,9 +138,16 @@ void Graphics::draw(State &state)
     tonemapper.exposure = state.exposure;
     tonemapper.gamma = state.gamma;
 
+#ifndef __APPLE__
 #define push(n) glPushDebugGroup(GL_DEBUG_SOURCE_APPLICATION, 0, -1, n)
 #define pop() glPopDebugGroup()
 #define with(n) for (bool cont = (push(n), true); cont; pop(), cont = false)
+#else
+// OS X does not yet support OpenGL 4.3 (still stuck on 4.1)
+#define push(n)
+#define pop
+#define with(n) 
+#endif
 
     with("Geometry") {
         ilG_geometry_bind(&rm->gbuffer);

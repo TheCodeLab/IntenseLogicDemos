@@ -11,6 +11,9 @@
 #ifndef _WIN32
 #include <signal.h>
 #endif
+#ifdef __APPLE__
+#include <xmmintrin.h>
+#endif
 
 #include "tgl/tgl.h"
 
@@ -132,6 +135,8 @@ void demoLoad(int argc, char **argv)
         option("", "fpe") {
 #ifdef _WIN32
             _controlfp(_EM_INVALID | _EM_ZERODIVIDE | _EM_OVERFLOW, _MCW_EM);
+#elif __APPLE__
+            _MM_SET_EXCEPTION_MASK(0);
 #else
             feenableexcept(FE_DIVBYZERO | FE_INVALID | FE_OVERFLOW);
 #endif
